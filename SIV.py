@@ -1,5 +1,3 @@
-#COMMANDS FOR ANALYSES FROM PAPER:
-
 #Main analyses and ablations:
 #for h in z noic; do for f in FULL DIASEND simglu;do for g in bo SIVFIRST SIVLAST;do python SIV.py $f $g $h PERSUB;done; for g in z SB norestrict nogate norecshift;do for a in 0 .5  1;do python SIV.py $a $f $g $h PERSUB tune;done;done;done;done;  
 
@@ -8,9 +6,6 @@
 
 #Variation in variable uncertainty
 #or f in z bo;do for g in 0 .1 .15 .25 .35 .45;  do python SIV.py simglu $g miss $f;done;done
-
-#rerun of BLs where patience was cut
-#for h in z noic; do for f in FULL DIASEND simglu;do for g in SB nogate;do for a in 0 .5  1;do python SIV.py $a $f $g $h PERSUB tune;done;done;done;done;  
 
 import os,datetime
 import sys
@@ -54,7 +49,10 @@ if 'simglu' in sys.argv:
 	LONGMIN=1000
 	PATIENCE=100
 
-
+SEED=1
+if 'seed' in sys.argv:
+	SEED=int(sys.argv[2])
+	outstr+='.S'+sys.argv[2]
 
 #-----------------------------------------------------------------Data set selection section
 
@@ -68,16 +66,16 @@ if 'new' in sys.argv or 'new1s' in sys.argv:
 	subjects=['540','544','552','567','584','596']
 	OLD=False
 	outstr='2020'
+TIDE=False
+if 'tide' in sys.argv:
+	subjects=['sub1','sub2','sub3','sub4','sub5','sub6']
+	TIDE=True
+	outstr='TIDE'+'h'+sys.argv[1]
 DIASEND=False
 if 'DIASEND' in sys.argv:
 	outstr='DIASEND'
 	DIASEND=True
 	subjects=['sub1','sub2','sub3','sub4','sub5','sub6','sub7','sub8']
-TIDE=False
-if 'tide' in sys.argv:
-	subjects=['sub1','sub2','sub3','sub4','sub5','sub6','sub7','sub8','sub9','sub10']
-	TIDE=True
-	outstr='TIDE'
 FULL=False
 if 'FULL' in sys.argv:
 	subjects=['559','563','570','575','588','591','540','544','552','567','584','596']
@@ -105,11 +103,6 @@ if 'simglu' in sys.argv:
 		missval=float(sys.argv[2])
 		outstr+='.miss'+sys.argv[2]
 
-
-SEED=1
-if 'seed' in sys.argv:
-	SEED=int(sys.argv[1])
-	outstr+='.S'+sys.argv[1]
 #-----------------------------------------------------------------Data processing options ##################################
 
 
@@ -150,7 +143,9 @@ if 'SIVFIRST' in sys.argv:
 if 'SIVLAST' in sys.argv:
 	outstr+='_SIVLAST'
 	SUBSAMPLE=2
-
+if 'SIVMIX' in sys.argv:
+	outstr+='_SIVMIX'
+	SUBSAMPLE=3
 
 
 #Only do NBEATS-> baseline network
@@ -249,13 +244,11 @@ if BEATSONLY:
 	LONGMIN*=1.67
 
 
-
 if NOINSCARBS:
 	if (not BEATSONLY) or (SUBSAMPLE>0):
 			if not NOGATE:
 				print('redundant IC run')
 				quit()
-
 
 
 
@@ -303,7 +296,6 @@ def main():
 	
 		#final evaluation of ensemble
 		#get test data
-		GLUM=1.0
 		train,val,test=makedata(4*6+horizon,sub)
 		testgen = ordered_data(BATCHSIZE, 4*6,horizon,test,True)
 
@@ -360,17 +352,17 @@ def main():
 			if not MEANOUT:
 				losses.append(mse_cpu(target, median)*x.shape[0])
 		
-			rmselosses.append(mse_lastpointonly_cpu(target*SCALEVAL*GLUM, median*SCALEVAL*GLUM)*x.shape[0])
-			maes.append(mae_lastpointonly_cpu(target*SCALEVAL*GLUM, median*SCALEVAL*GLUM)*x.shape[0])
+			rmselosses.append(mse_lastpointonly_cpu(target*SCALEVAL, median*SCALEVAL)*x.shape[0])
+			maes.append(mae_lastpointonly_cpu(target*SCALEVAL, median*SCALEVAL)*x.shape[0])
 		
 			if np.sum(ic)>1:
-				icrmselosses.append(mse_lastpointonly_cpu(target[ic,:]*SCALEVAL*GLUM, median[ic,:]*SCALEVAL*GLUM)*x[ic,:,:].shape[0])
-				icmaes.append(mae_lastpointonly_cpu(target[ic,:]*SCALEVAL*GLUM, median[ic,:]*SCALEVAL*GLUM)*x[ic,:,:].shape[0])
+				icrmselosses.append(mse_lastpointonly_cpu(target[ic,:]*SCALEVAL, median[ic,:]*SCALEVAL)*x[ic,:,:].shape[0])
+				icmaes.append(mae_lastpointonly_cpu(target[ic,:]*SCALEVAL, median[ic,:]*SCALEVAL)*x[ic,:,:].shape[0])
 				ictotalpoints = ictotalpoints+x[ic,:,:].shape[0]
 		
 			if np.sum(noic)>1:
-				nrmselosses.append(mse_lastpointonly_cpu(target[noic,:]*SCALEVAL*GLUM, median[noic,:]*SCALEVAL*GLUM)*x[noic,:].shape[0])
-				nmaes.append(mae_lastpointonly_cpu(target[noic,:]*SCALEVAL*GLUM, median[noic,:]*SCALEVAL*GLUM)*x[noic,:].shape[0])
+				nrmselosses.append(mse_lastpointonly_cpu(target[noic,:]*SCALEVAL, median[noic,:]*SCALEVAL)*x[noic,:].shape[0])
+				nmaes.append(mae_lastpointonly_cpu(target[noic,:]*SCALEVAL, median[noic,:]*SCALEVAL)*x[noic,:].shape[0])
 				ntotalpoints = ntotalpoints+x[noic,:,:].shape[0]
 			batch=batch+1
 			if done:
@@ -511,7 +503,7 @@ def fit(net, optimiser, traingen,valgen,mydir,device, basedir,sub):#bonusdata=No
 			if x.shape[0]<1:
 				break
 
-			forecast,ul=  net(   torch.tensor(x, dtype=torch.float).to(device))
+			forecast,ul=  net(   torch.tensor(x, dtype=torch.float).to(device),torch.tensor(target, dtype=torch.float).to(device))
 
 			loss = losss(forecast.to(device)	, torch.tensor(target, dtype=torch.float).to(device)).to(device)	
 			inds=np.sum(np.sum(x[:,:,1:3],1),1)>0
@@ -548,7 +540,7 @@ def fit(net, optimiser, traingen,valgen,mydir,device, basedir,sub):#bonusdata=No
 				if x.shape[0]<1:
 					break
 
-				forecast,ul=  net(   torch.tensor(x, dtype=torch.float).to(device))		
+				forecast,ul=  net(   torch.tensor(x, dtype=torch.float).to(device),torch.tensor(target, dtype=torch.float).to(device))		
 			
 			loss = losss(forecast.to(device)	, torch.tensor(target, dtype=torch.float).to(device)).to(device)				
 			total=total+x.shape[0]
@@ -602,7 +594,7 @@ def eval(net, optimiser, testgen,mydir,  device,OSTR):
 			xs.append(x)
 			targs.append(target)
 			totalpoints = totalpoints+x.shape[0]
-			forecast,ul= net(torch.tensor(x, dtype=torch.float).to(device))		
+			forecast,ul= net(   torch.tensor(x, dtype=torch.float).to(device),torch.tensor(target, dtype=torch.float).to(device))		
 			forecast=forecast.to(device)
 			preds.append(forecast.cpu().numpy())
 
@@ -754,7 +746,7 @@ class Block(nn.Module):
 
 		self.to(device)
 		
-	def forward(self, xt,xorig,testtime=False):
+	def forward(self, xt,xorig):
 		
 
 
@@ -933,12 +925,16 @@ class network(nn.Module):
 		
   
 
-	def forward(self, x,testtime=False):
+	def forward(self, x,target):
+
+		
 		xorig=x.clone()
 		if CF:
 			for f in range(1,x.shape[1]):
 				x[:,f,1:3]+=x[:,f-1,1:3]
-		forecast,ul=self.mainblock(x,xorig,testtime)
+		
+		forecast,ul=self.mainblock(x,xorig)
+
 		return forecast,ul
 
 
@@ -948,26 +944,16 @@ class network(nn.Module):
 ####################################  DATA GENERATION SECTION  ############################################################################################################  
 
 def makedata(totallength,sub):
-	numg=0
-	numc=0
-	numd=0
-	numm=0
 	train=[]
 	test=[]
 	val=[]
-	glus=[]
-	if DIASEND or TIDE:
-		if DIASEND:
-			a=joblib.load('diasend_ohio.pkl');
-		if TIDE:
-			a=joblib.load('/data3/interns/time_series_pred/ohiocomp/tidepool_ohioformat_bas.pkl');
+	if DIASEND:
+		a=joblib.load('diasend_ohio.pkl');
 		cursub=-1
 		for f in a:
 			if len(f)<8640:
 				continue
 			f=f[:8640,:]
-			if TIDE:
-				f[:,0]=f[:,0]*17.95
 			temp=f[:,0]
 			temp1=f[:,1]
 			temp2=f[:,2]
@@ -986,10 +972,6 @@ def makedata(totallength,sub):
 
 			f[:,1]=d
 			f[:,2]=c
-			numg+=temp.shape[0]
-			numc+=len(c[~np.isnan(c)*(c>0)])
-			numd+=len(d[~np.isnan(d)*(d>0)])
-			numm+=len(f[:,0][np.isnan(f[:,0])+(f[:,0]==0)])
 			# f[:,1][np.isnan(f[:,1])]=0
 
 			# d=f[:,1].copy()
@@ -1015,8 +997,6 @@ def makedata(totallength,sub):
 				f[:,2]/=200.0
 				f[:,0]/=SCALEVAL
 				f[:,5]/=SCALEVAL
-
-				
 			ll=int(f.shape[0]*.7)
 			llb=int(f.shape[0]*.85)
 			# if fourvar:
@@ -1025,13 +1005,27 @@ def makedata(totallength,sub):
 			train.append(f[:ll,:])
 			val.append(f[ll:llb,:])	
 			test.append(f[llb:,:])
-			if cursub==9:
-				break
 		print(len(train))
-
-		print(numg/numc,numg/numd,numm/numg)
 		return train,val,test
-	
+	if TIDE:
+		a=joblib.load('/data3/interns/time_series_pred/ohiocomp/tidepool_ohioformat_bas.pkl');
+		if sub==99:
+			subs=range(4)
+		else:
+			subs=[sub]
+		for ff in subs:
+			f=a[ff]
+			f[:,0]=f[:,0]*17.95
+			ll= 80000
+			if DOTHESCALE:
+				f[:,1]/=50.0
+				f[:,2]/=200.0
+				f[:,0]/=SCALEVAL
+
+			train.append(f[:int(ll*.75),:])
+			val.append(f[int(ll*.75):int(ll*.85),:])
+			test.append(f[int(ll*.85)-(totallength-12-1):ll,:])
+		return train,val,test
 	
 
 	if SIM:
@@ -1054,13 +1048,6 @@ def makedata(totallength,sub):
 			ff[:,0]/=SCALEVAL
 			ff[:,1]/=50
 			ff[:,2]/=200
-			temp=ff
-			c=ff[:,1]
-			d=ff[:,2]
-			numg+=temp.shape[0]
-			numc+=len(c[~np.isnan(c)*(c>0)])
-			numd+=len(d[~np.isnan(d)*(d>0)])
-			numm+=len(ff[:,0][np.isnan(ff[:,0])+(ff[:,0]==0)])
 			if missval>0:
 				
 				for i in range(ff.shape[0]):
@@ -1091,7 +1078,6 @@ def makedata(totallength,sub):
 				ff[:,2]/=200
 				test.append(ff)
 			print(len(test))
-		print(numg/numc,numg/numd,numm/numg)
 		return train,val,test
 
 
@@ -1106,7 +1092,6 @@ def makedata(totallength,sub):
 	stored_trains={}
 	storedd={}
 	storedc={}
-	storedg={}
 	for f in os.listdir(folder):
 		if f.endswith('train.pkl'):
 			if not sub==99: 
@@ -1129,13 +1114,10 @@ def makedata(totallength,sub):
 			if DOTHESCALE:
 				d/=50.0
 				c/=200.0
-			numg+=len(g)
-			numc+=len(c[~np.isnan(c)*(c>0)])
-			numd+=len(d[~np.isnan(d)*(d>0)])
-			numm+=len(g[np.isnan(g)+(g==0)])
 
-		
-				
+			
+
+
 #			bols=d[d>0]
 # 			bols2=bols[bols>np.mean(bols)-np.std(bols)]
 
@@ -1165,7 +1147,6 @@ def makedata(totallength,sub):
 			val.append(x.copy()[int(ll*.8):,:])
 			#store to use in test for end
 			stored_trains[f]=x.copy()
-
 		
 			
 	for f in os.listdir(folder):
@@ -1193,10 +1174,6 @@ def makedata(totallength,sub):
 			if DOTHESCALE:
 				d/=50.0
 				c/=200.0
-			numg+=len(g)
-			numc+=len(c[~np.isnan(c)*(c>0)])
-			numd+=len(d[~np.isnan(d)*(d>0)])
-			numm+=len(g[np.isnan(g)+(g==0)])
 
 
 			
@@ -1214,8 +1191,6 @@ def makedata(totallength,sub):
 			t=stored_trains[f.replace('test','train')]
 			x=np.concatenate((t[-(totallength-12-1):,:],x),axis=0)
 			test.append(x.copy())
-
-	print(numg/numc,numg/numd,numm/numg)
 	return train,val,test
 
 
