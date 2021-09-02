@@ -9,8 +9,6 @@
 #Variation in variable uncertainty
 #or f in z bo;do for g in 0 .1 .15 .25 .35 .45;  do python SIV.py simglu $g miss $f;done;done
 
-#rerun of BLs where patience was cut
-#for h in z noic; do for f in FULL DIASEND simglu;do for g in SB nogate;do for a in 0 .5  1;do python SIV.py $a $f $g $h PERSUB tune;done;done;done;done;  
 
 import os,datetime
 import sys
@@ -1429,6 +1427,3 @@ def ordered_data(num_samples, backcast_length, forecast_length, dataa,doicanyway
 if __name__ == '__main__':
 	main()
 	
-	
-	
-
