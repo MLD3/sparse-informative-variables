@@ -1,15 +1,15 @@
 #COMMANDS FOR ANALYSES FROM PAPER:
 
-#MUST USE THIS VENV:
+#MUST USE THIS VENV (torch XX, python XX, CUDA XX):
 # cd ~; source venv/bin/activate;cd /data3/interns/postohio/;export CUBLAS_WORKSPACE_CONFIG=:4096:2;export CUDA_VISIBLE_DEVICES=
 
 
 #analyses and ablations:
 #for a in simglu ohio;do for x in 0 1 2 3 4 5 6 7 8 9 10 11;do python SIV.py $a $x bo noic;python SIV.py $a $x bo DIRECT; python SIV.py $a $x SB noic;for b in bo SB SIVFIRST SIVLAST z;do python SIV.py $a $x $b;done;done;done
-#for a in simglu ohio ;do for x in 0 1 2 3 4 5 6 7 8 9 10 11;do for b in NOGATE norestrict nodirb noloss; do python SIV.py $a $x $b;done;done;done
+#for a in simglu ohio ;do for x in 0 1 2 3 4 5 6 7 8 9 10 11;do for b in NOGATE norestrict nodirb; do python SIV.py $a $x $b;done;done;done
 
 #Variation in variable uncertainty
-#x=5 ; for m in 0 .1 .2 .3 .4 .5; do python SIV.py simglu $x $m bo miss;python SIV.py simglu $x $m bo noic miss; python SIV.py simglu $x $m miss;done
+#x=9 ; for m in 0 .1 .2 .3 .4 .5; do python SIV.py simglu $x $m bo miss;python SIV.py simglu $x $m bo noic miss; python SIV.py simglu $x $m miss;done
 
 import os,datetime
 import sys
@@ -69,7 +69,6 @@ if 'ohio' in sys.argv:
 SIM=False
 SIMGLU=False
 datalen=10
-SIVSCALE=0
 if 'simglu' in sys.argv:
 	SIM=True
 	nv=5
@@ -82,7 +81,6 @@ if 'simglu' in sys.argv:
 		quit()
 	
 	SIMSUB=subs[int(sys.argv[2])]
-	SIVSCALE=.0001
 	outstr='SIM.'+str(SIMSUB)#+'_'+sys.argv[1]
 	if 'miss' in sys.argv:
 		missval=float(sys.argv[3])
@@ -213,21 +211,11 @@ lrdec=1#float(sys.argv[3])
 wddec=1#float(sys.argv[4])
 lstmsize=1
 lstmlay=2
-sivbon=0
-SIVDECAY=0
-if 'tune' in sys.argv:
-	SIVSCALE=float(sys.argv[1])
-	outstr+='.T'+sys.argv[1]#+'.DL'+sys.argv[3]
-	if 'decay' in sys.argv:
-		outstr+='.D'+sys.argv[3]
-		SIVDECAY=float(sys.argv[3])
 NOGATE,outstr=inarg('nogate',outstr)
 norestrict,outstr=inarg('norestrict',outstr)
 if norestrict:
 	RESTRICT=False
-noloss,outstr=inarg('noloss',outstr)
-if noloss:
-	SIVSCALE=0
+
 
 noshiftgatespec,outstr=inarg('SB',outstr)
 
@@ -497,7 +485,6 @@ def train_and_evaluate(curmodel,maindir,forecast_length,backcast_length,sub,base
 
 def fit(net, optimiser, traingen,valgen,mydir,device, basedir,sub):#bonusdata=None):
 	losss=mse
-	lossscale=SIVSCALE
 	improvepoint=0
 
 	
@@ -548,20 +535,14 @@ def fit(net, optimiser, traingen,valgen,mydir,device, basedir,sub):#bonusdata=No
 				inds=np.sum(np.sum(x[:,:,1:3],1),1)>-1
 			
 
-			if len(inds[inds])>0 and SIVSCALE>0:
-				uul=1/torch.mean(ul[inds,:]**2)
-				loss+=lossscale*uul
-
+			
 
 			loss.backward()
 			temptrain.append(loss.item()*x.shape[0])
 			total=total+x.shape[0]
 			optimiser.step()
 			
-			if SIVDECAY>0:
-				lossscale*=SIVDECAY
-				lossscale=np.max((lossscale,SIVSCALE*.0001))
-				lossscale=np.min((lossscale,SIVSCALE*1000))
+			
 			if done:
 				break
 
