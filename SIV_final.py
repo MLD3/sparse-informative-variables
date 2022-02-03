@@ -1,16 +1,15 @@
 #COMMANDS FOR ANALYSES FROM PAPER:
 
-#MUST USE THIS VENV (torch XX, python XX, CUDA XX):
+#MUST USE THIS VENV:
 # cd ~; source venv/bin/activate;cd /data3/interns/postohio/;export CUBLAS_WORKSPACE_CONFIG=:4096:2;export CUDA_VISIBLE_DEVICES=
 
 
 #analyses and ablations:
-#for a in simglu ;do for x in 0 1 2 3 4 5 6 7 8 9 10 11;do python SIV.py $a $x bo noic;python SIV.py $a $x bo DIRECT; python SIV.py $a $x SB noic;  for b in bo SB SIVFIRST SIVLAST;do python SIV.py $a $x $b;done; for b in .00001 .001 0;do for c in z;do python SIV.py $b $x $a $c tune;done;done;done;done
-#for a in ohio ;do for x in 0 1 2 3 4 5 6 7 8 9 10 11;do python SIV.py $a $x bo noic;python SIV.py $a $x bo DIRECT; python SIV.py $a $x SB noic;  for b in bo SB SIVFIRST SIVLAST;do python SIV.py $a $x $b;done; for b in 0;do for c in z;do python SIV.py $b $x $a $c tune;done;done;done;done
-#for a in simglu ohio ;do for x in 0 1 2 3 4 5 6 7 8 9 10 11;do for b in NOGATE norestrict nodirb; do python SIV.py $a $x $b;done;done;done
+#for a in simglu ohio;do for x in 0 1 2 3 4 5 6 7 8 9 10 11;do python SIV.py $a $x bo noic;python SIV.py $a $x bo DIRECT; python SIV.py $a $x SB noic;for b in bo SB SIVFIRST SIVLAST z;do python SIV.py $a $x $b;done;done;done
+#for a in simglu ohio ;do for x in 0 1 2 3 4 5 6 7 8 9 10 11;do for b in NOGATE norestrict nodirb noloss; do python SIV.py $a $x $b;done;done;done
 
 #Variation in variable uncertainty
-#x=5 ; for m in 0 .05 .1 .15 .2 .25 .3 .35 .4 .45 .5 .55 .6; do python SIV.py simglu $x $m bo miss;python SIV.py simglu $x $m bo noic miss; python SIV.py simglu $x $m simglu;done
+#x=5 ; for m in 0 .1 .2 .3 .4 .5; do python SIV.py simglu $x $m bo miss;python SIV.py simglu $x $m bo noic miss; python SIV.py simglu $x $m miss;done
 
 import os,datetime
 import sys
@@ -81,9 +80,9 @@ if 'simglu' in sys.argv:
 	if int(sys.argv[2])>9:
 		print('adult only')
 		quit()
-	scales=.00001*np.array([1.0,100,100,100,1,1,100,1,100,100])
+	
 	SIMSUB=subs[int(sys.argv[2])]
-	SIVSCALE=scales[int(sys.argv[2])]
+	SIVSCALE=.0001
 	outstr='SIM.'+str(SIMSUB)#+'_'+sys.argv[1]
 	if 'miss' in sys.argv:
 		missval=float(sys.argv[3])
@@ -226,7 +225,9 @@ NOGATE,outstr=inarg('nogate',outstr)
 norestrict,outstr=inarg('norestrict',outstr)
 if norestrict:
 	RESTRICT=False
-
+noloss,outstr=inarg('noloss',outstr)
+if noloss:
+	SIVSCALE=0
 
 noshiftgatespec,outstr=inarg('SB',outstr)
 
