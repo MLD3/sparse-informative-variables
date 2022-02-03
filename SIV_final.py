@@ -6,7 +6,7 @@
 
 #analyses and ablations:
 #for a in simglu ohio;do for x in 0 1 2 3 4 5 6 7 8 9 10 11;do python SIV.py $a $x bo noic;python SIV.py $a $x bo DIRECT; python SIV.py $a $x SB noic;for b in bo SB SIVFIRST SIVLAST z;do python SIV.py $a $x $b;done;done;done
-#for a in simglu ohio ;do for x in 0 1 2 3 4 5 6 7 8 9 10 11;do for b in NOGATE norestrict nodirb; do python SIV.py $a $x $b;done;done;done
+#for a in simglu ohio ;do for x in 0 1 2 3 4 5 6 7 8 9 10 11;do for b in nogate norestrict nodirb; do python SIV.py $a $x $b;done;done;done
 
 #Variation in variable uncertainty
 #x=9 ; for m in 0 .1 .2 .3 .4 .5; do python SIV.py simglu $x $m bo miss;python SIV.py simglu $x $m bo noic miss; python SIV.py simglu $x $m miss;done
@@ -874,11 +874,10 @@ class Block(nn.Module):
 					else:
 						outS[bothinds,f]=self.lin(lstm_outST.clone()[bothinds,0,:self.units*2]+lstm_outSCT.clone()[bothinds,0,:self.units*2]).view(-1)
 				else:
-					if ONEOUT:
-						if RESTRICT:
-							outS[:,f]=self.lin(-F.relu(lstm_outST.clone()[:,0,:self.units*2])+F.relu(lstm_outSCT.clone()[:,0,:self.units*2:])).view(-1)
-						else:
-							outS[:,f]=self.lin(lstm_outST.clone()[:,0,:self.units*2]+lstm_outSCT.clone()[:,0,:self.units*2:]).view(-1)
+					if RESTRICT:
+						outS[:,f]=self.lin(-F.relu(lstm_outST.clone()[:,0,:self.units*2])+F.relu(lstm_outSCT.clone()[:,0,:self.units*2:])).view(-1)
+					else:
+						outS[:,f]=self.lin(lstm_outST.clone()[:,0,:self.units*2]+lstm_outSCT.clone()[:,0,:self.units*2:]).view(-1)
 			lstm_out=lstm_outx.clone()
 			
 		
