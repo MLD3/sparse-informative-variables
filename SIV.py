@@ -4,7 +4,7 @@
 #cd ~; source venv/bin/activate;cd /data3/interns/postohio/;export CUBLAS_WORKSPACE_CONFIG=:4096:2;export CUDA_VISIBLE_DEVICES=
 
 #Main analyses and ablations:
-#for a in simglu ohio;do for x in 0 1 2 3 4 5 6 7 8 9 10 11;do python SIV.py $a $x bo noic;python SIV.py $a $x bo DIRECT; python SIV.py $a $x SB noic;  for b in bo SB SIVFIRST SIVLAST z nogate norestrict nodirb;do python SIV.py $a $x $b;done; done;done
+#for a in simglu ohio;do for x in 0 1 2 3 4 5 6 7 8 9 10 11;do python SIV.py $a $x bo noic;python SIV.py $a $x bo DIRECT; for b in bo SB SIVFIRST SIVLAST z nogate norestrict nodirb;do python SIV.py $a $x $b;done; done;done
 
 #missingness analysis:
 #x=9 ; for m in 0 .1 .2 .3 .4 .5; do python SIV.py simglu $x $m bo miss;python SIV.py simglu $x $m miss;done;
