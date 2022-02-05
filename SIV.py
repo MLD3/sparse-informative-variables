@@ -228,6 +228,7 @@ nodirb,outstr=inarg('nodirb',outstr)
 if not BEATSONLY and not nogateresdir and not nodirb:
 	DIRECT=True
 
+
 #################################### MAIN SECTION ############################################
 def main():
 	maindir = os.getcwd()+'/'+outstr
@@ -762,14 +763,12 @@ class Block(nn.Module):
 
 
 		if not BEATSONLY:
+			bothinds=torch.sum(torch.sum(x[:,:,1:3].clone(),1),1)>0
 			inds=torch.sum(x[:,:,1],1)>0
 			Cinds=torch.sum(x[:,:,2],1)>0
 			xin=x.clone()
 			if not GIVMAINIC:
 				xin[:,:,1:3]=0
-			if NOGATE:
-				inds=torch.sum(x[:,:,1],1)>-1
-				Cinds=torch.sum(x[:,:,2],1)>-1
 
 			# if RECBACK:
 			# 	xin=xint.clone()
@@ -816,10 +815,16 @@ class Block(nn.Module):
 				else:
 					lstm_outS, (hdecS,cdecS) = self.decS(lstm_out,(hdecS,cdecS))		
 				lstmotemp=lstm_outx.clone()
-				if not RESTRICT:
-					lstmotemp[inds,0,:]=lstm_outx[inds,0,:].clone()-lstm_outS[inds,0,:self.units*2].clone()
+				if NOGATE:
+					if RESTRICT:
+						lstmotemp[:,0,:]=lstm_outx[:,0,:].clone()-F.relu(lstm_outS[:,0,:self.units*2].clone())
+					else:
+						lstmotemp[:,0,:]=lstm_outx[:,0,:].clone()+lstm_outS[:,0,:self.units*2].clone()
 				else:
-					lstmotemp[inds,0,:]=lstm_outx[inds,0,:].clone()-F.relu(lstm_outS[inds,0,:self.units*2].clone())
+					if not RESTRICT:
+						lstmotemp[inds,0,:]=lstm_outx[inds,0,:].clone()-lstm_outS[inds,0,:self.units*2].clone()
+					else:
+						lstmotemp[inds,0,:]=lstm_outx[inds,0,:].clone()-F.relu(lstm_outS[inds,0,:self.units*2].clone())
 				lstm_outx=lstmotemp.clone()
 
 				if DIRECT:
@@ -829,10 +834,16 @@ class Block(nn.Module):
 				else:
 					lstm_outSC, (hdecSC,cdecSC) = self.decSC(lstm_out.view((500,1,-1)),(hdecSC,cdecSC))		
 				lstmotemp=lstm_outx.clone()
-				if not RESTRICT:
-					lstmotemp[Cinds,0,:]=lstm_outx[Cinds,0,:].clone()+lstm_outSC[Cinds,0,:self.units*2].clone()
+				if NOGATE:
+					if RESTRICT:
+						lstmotemp[:,0,:]=lstm_outx[:,0,:].clone()+F.relu(lstm_outSC[:,0,:self.units*2].clone())
+					else:
+						lstmotemp[:,0,:]=lstm_outx[:,0,:].clone()+lstm_outSC[:,0,:self.units*2].clone()
 				else:
-					lstmotemp[Cinds,0,:]=lstm_outx[Cinds,0,:].clone()+F.relu(lstm_outSC[Cinds,0,:self.units*2].clone())
+					if not RESTRICT:
+						lstmotemp[Cinds,0,:]=lstm_outx[Cinds,0,:].clone()+lstm_outSC[Cinds,0,:self.units*2].clone()
+					else:
+						lstmotemp[Cinds,0,:]=lstm_outx[Cinds,0,:].clone()+F.relu(lstm_outSC[Cinds,0,:self.units*2].clone())
 				lstm_outx=lstmotemp.clone()
 				outer[:,f]=self.lin(lstm_outx.clone()[:,0,:]).view(-1)
 				lstm_outST=lstm_outS.clone()
