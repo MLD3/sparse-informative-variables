@@ -817,7 +817,7 @@ class Block(nn.Module):
 				lstmotemp=lstm_outx.clone()
 				if NOGATE:
 					if RESTRICT:
-						lstmotemp[:,0,:]=lstm_outx[:,0,:].clone()-F.relu(lstm_outS[:,0,:self.units*2].clone())
+						lstmotemp[:,0,:]=lstm_outx[:,0,:].clone()+F.relu(lstm_outS[:,0,:self.units*2].clone())
 					else:
 						lstmotemp[:,0,:]=lstm_outx[:,0,:].clone()+lstm_outS[:,0,:self.units*2].clone()
 				else:
