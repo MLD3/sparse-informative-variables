@@ -228,7 +228,7 @@ nodirb,outstr=inarg('nodirb',outstr)
 if not BEATSONLY and not nogateresdir and not nodirb:
 	DIRECT=True
 
-
+CLEANCARB,outstr=inarg('CLEANCARB2',outstr)
 #################################### MAIN SECTION ############################################
 def main():
 	maindir = os.getcwd()+'/'+outstr
@@ -817,7 +817,7 @@ class Block(nn.Module):
 				lstmotemp=lstm_outx.clone()
 				if NOGATE:
 					if RESTRICT:
-						lstmotemp[:,0,:]=lstm_outx[:,0,:].clone()+F.relu(lstm_outS[:,0,:self.units*2].clone())
+						lstmotemp[:,0,:]=lstm_outx[:,0,:].clone()-F.relu(lstm_outS[:,0,:self.units*2].clone())
 					else:
 						lstmotemp[:,0,:]=lstm_outx[:,0,:].clone()+lstm_outS[:,0,:self.units*2].clone()
 				else:
@@ -970,7 +970,7 @@ def makedata(totallength,sub):
 			b=np.asarray(a['basal'])
 			d=np.asarray(a['dose'])
 			c=np.asarray(a['carbs'])
-			
+			g[np.isnan(g)]=0
 			c[np.isnan(c)]=0
 			d[np.isnan(d)]=0
 			
@@ -978,7 +978,12 @@ def makedata(totallength,sub):
 				d/=SCALECARB
 				c/=SCALEBOL
 			
-			
+			if CLEANCARB:
+				for i in range(len(c)):
+					if c[i]>0:
+						if len(d[i:i+36][d[i:i+36]>0])!=1 or np.max(g[i:i+36])>180/SCALEVAL or np.min(g[i:i+36])>=70/SCALEVAL:
+							c[i]=999
+
 
 
 			fing=np.asarray(a['finger'])/400.0
@@ -1019,7 +1024,7 @@ def makedata(totallength,sub):
 			d=np.asarray(a['dose'])
 			c=np.asarray(a['carbs'])
 			
-			
+			g[np.isnan(g)]=0
 			c[np.isnan(c)]=0
 			d[np.isnan(d)]=0
 			
@@ -1028,6 +1033,11 @@ def makedata(totallength,sub):
 				c/=SCALEBOL
 			
 
+			if CLEANCARB:
+				for i in range(len(c)):
+					if c[i]>0:
+						if len(d[i:i+36][d[i:i+36]>0])!=1 or np.max(g[i:i+36])>180/SCALEVAL or np.min(g[i:i+36])>=70/SCALEVAL:
+							c[i]=999
 
 			
 			fing=np.asarray(a['finger'])/400.0
@@ -1096,7 +1106,9 @@ def data(num_samples, backcast_length, forecast_length, data,ic):
 					l[np.isnan(l)]=0
 					learn[:,0]=l
 					l[learn[:,0]==0]=0
-
+				if CLEANCARB:
+					if np.max(learn[:,2])>100:
+						return np.asarray([]),None,False
 				see=temp[i+backcast_length:i+backcast_length+forecast_length,0]
 				if TRAINICONLY or ic==2:
 					if np.sum(learn[:,1])+np.sum(learn[:,2])==0:
@@ -1110,6 +1122,7 @@ def data(num_samples, backcast_length, forecast_length, data,ic):
 					return np.asarray([]),None,False
 				if np.sum(learn[:,0])==0:
 					return np.asarray([]),None,False
+
 				return learn,see,False
 		   
 		
@@ -1198,6 +1211,9 @@ def ordered_data(num_samples, backcast_length, forecast_length, dataa,doicanyway
 			# learn[:,0]=gaus(learn[:,0],1)
 			# learn[:,0][origlearn[:,0]==0]=0
 		see=temp[i+backcast_length:i+backcast_length+forecast_length,0]
+		if CLEANCARB:
+			if np.max(learn[:,2])>100:
+				return np.asarray([]),None,False
 		if TESTICONLY:
 			if np.sum(learn[:,1])+np.sum(learn[:,2])==0:
 				return np.asarray([]),None,False
