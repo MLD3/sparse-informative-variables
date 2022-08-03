@@ -28,7 +28,9 @@ outcomes=['.FINAL_RMSE_out','.FINALMAEout']
 outss=outcomes
 
 
-
+#for T test
+blT=[]
+oT=[]
 
 outs=[]
 outb=[]
@@ -61,6 +63,10 @@ for mm in range(len(models)):
 			for f in os.listdir(name):
 				if f.endswith(o):
 					errs.append(float( f[:7]))
+					if mm==3:
+						blT.append(float( f[:7]))
+					if mm==8:
+						oT.append(float( f[:7]))
 			for f in os.listdir(nameno):
 				if f.endswith(o):
 					uses.append(float(f[:7])-errs[-1])
@@ -127,10 +133,12 @@ for mm in range(len(models)):
 	print(out)
 	outs.append(out)
 
-
-
-
-
+print('')
+print('')
+print('t-test.')
+print(scipy.stats.ttest_rel(blT,oT))
+print('')
+print('')
 
 
 
